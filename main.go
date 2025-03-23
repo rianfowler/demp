@@ -391,14 +391,6 @@ func authPKCE() error {
 
 	oauthUrl := "https://burritops.us.auth0.com/oauth/token"
 
-	// payload := strings.NewReader("grant_type=authorization_code&d
-	/*
-
-		- add post login action
-		- use management api with secret / client id we used in terminal to fetch token and then hit management api to pull github token out and into custom claim
-
-	*/
-
 	// Build the query parameters.
 
 	p := url.Values{}
@@ -455,42 +447,6 @@ func authPKCE() error {
 	}
 
 	saveToken(ghtoken)
-
-	// userID := "github|4998130"
-
-	// url := fmt.Sprintf("https://burritops.us.auth0.com/api/v2/users/%s", userID)
-	// req, err = http.NewRequest("GET", url, nil)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create request: %v", err)
-	// }
-
-	// 	println("Bearer " + mgmtToken)
-
-	// 	// Set the Authorization header with the Management API token.
-	// 	req.Header.Add("Authorization", "Bearer "+mgmtToken)
-	// 	req.Header.Add("Content-Type", "application/json")
-
-	// 	client := &http.Client{Timeout: 10 * time.Second}
-	// 	resp, err := client.Do(req)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to execute request: %v", err)
-	// 	}
-	// 	defer resp.Body.Close()
-
-	// 	// Check that we got a 200 OK status.
-	// 	if resp.StatusCode != http.StatusOK {
-	// 		bodyBytes, _ := io.ReadAll(resp.Body)
-	// 		return fmt.Errorf("failed to get user profile: status %d, body: %s", resp.StatusCode, string(bodyBytes))
-	// 	}
-
-	// 	var profile UserProfile
-	// 	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
-	// 		return fmt.Errorf("failed to decode response: %v", err)
-	// 	}
-
-	// 	fmt.Printf("profile: %s ", profile)
-
-	// d
 
 	return nil
 }
