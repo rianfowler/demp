@@ -2,6 +2,10 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -21,6 +26,11 @@ const (
 	clientID      = "Iv23lioNIN937L1ok0Rd"
 	deviceCodeURL = "https://github.com/login/device/code"
 	tokenURL      = "https://github.com/login/oauth/access_token"
+	authDomain    = "burritops.us.auth0.com"           // e.g., "your-tenant.auth0.com"
+	auth0clientID = "o71WB9il2dm4vBFBk6KSgTcSWCKYDStn" // Your Auth0 application's client ID
+	redirectURI   = "http://localhost:8080/callback"
+	// Scopes should include those needed for authentication and for GitHub access.
+	scope = "openid profile email offline_access read:github"
 )
 
 type DeviceCodeResponse struct {
@@ -171,7 +181,7 @@ func reposCommand(cmd *cobra.Command, args []string) {
 }
 
 func main() {
-	rootCmd := &cobra.Command{Use: "ghcli"}
+	rootCmd := &cobra.Command{Use: "ri"}
 
 	authCmd := &cobra.Command{
 		Use:   "auth",
@@ -184,8 +194,16 @@ func main() {
 		Short: "Get authenticated user's repositories",
 		Run:   reposCommand,
 	}
+	// authpkceCmd is the Cobra command for authentication via PKCE.
+	authpkceCmd := &cobra.Command{
+		Use:   "authpkce",
+		Short: "Authenticate using interactive PKCE flow",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return authPKCE()
+		},
+	}
 
-	rootCmd.AddCommand(authCmd, reposCmd)
+	rootCmd.AddCommand(authCmd, reposCmd, authpkceCmd)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -244,4 +262,151 @@ func getToken() (string, error) {
 		return "", fmt.Errorf("no token found in keychain")
 	}
 	return string(results[0].Data), nil
+}
+
+// generateCodeVerifier creates a random code verifier.
+func generateCodeVerifier() (string, error) {
+	// Generate 32 random bytes.
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// generateCodeChallenge computes the SHA256 code challenge for the given verifier.
+func generateCodeChallenge(verifier string) string {
+	sha := sha256.New()
+	sha.Write([]byte(verifier))
+	sum := sha.Sum(nil)
+	return base64.RawURLEncoding.EncodeToString(sum)
+}
+
+// startLocalServer starts an HTTP server to listen for the OAuth callback.
+func startLocalServer(ctx context.Context, codeChan chan<- string) error {
+	mux := http.NewServeMux()
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
+
+	// Handle the callback endpoint.
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			http.Error(w, "No code in the request", http.StatusBadRequest)
+			return
+		}
+		fmt.Fprintf(w, "Authentication successful. You can close this window.")
+		codeChan <- code
+		// Shutdown the server in a goroutine.
+		go func() {
+			_ = server.Shutdown(context.Background())
+		}()
+	})
+
+	// Run the server in a goroutine.
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
+
+	// If the context is canceled (e.g. timeout), shut down the server.
+	go func() {
+		<-ctx.Done()
+		_ = server.Shutdown(context.Background())
+	}()
+
+	return nil
+}
+
+// authPKCE implements the interactive PKCE flow.
+func authPKCE() error {
+	// Generate PKCE verifier and challenge.
+	verifier, err := generateCodeVerifier()
+	if err != nil {
+		return fmt.Errorf("failed to generate code verifier: %w", err)
+	}
+	challenge := generateCodeChallenge(verifier)
+
+	// Build the Auth0 authorization URL with PKCE parameters.
+	// https://burritops.us.auth0.com/authorize?response_type=code&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&client_id=o71WB9il2dm4vBFBk6KSgTcSWCKYDStn&redirect_uri=http://localhost:8080/callback&scope=openid%20profile&state=xyzABC123
+	/*
+
+		open this url
+		get the code back
+		figure out how to et the github token
+			maybe create an action that puts the github token on the claims
+	*/
+	baseURL := fmt.Sprintf("https://%s/authorize", authDomain)
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		panic(err)
+	}
+
+	// Build the query parameters.
+	q := u.Query()
+	q.Set("response_type", "code")
+	q.Set("client_id", auth0clientID)
+	q.Set("redirect_uri", redirectURI)
+	q.Set("scope", scope)
+	q.Set("code_challenge", challenge)
+	q.Set("code_challenge_method", "S256")
+	u.RawQuery = q.Encode()
+
+	// This is your fully constructed URL.
+	authURL := u.String()
+
+	// authURL := fmt.Sprintf("https://%s/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&code_challenge=%s&code_challenge_method=S256", authDomain, clientID, redirectURI, scope, challenge)
+
+	// Open the user's browser.
+	fmt.Println("Opening browser for authentication...")
+	// Note: "open" works on macOS; on Linux you might use "xdg-open", on Windows "start".
+	// TODO: add support for other OS's
+	if err := exec.Command("open", authURL).Start(); err != nil {
+		return fmt.Errorf("failed to open browser: %w", err)
+	}
+
+	// Start a local HTTP server to wait for the callback.
+	codeChan := make(chan string)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	if err := startLocalServer(ctx, codeChan); err != nil {
+		return fmt.Errorf("failed to start local server: %w", err)
+	}
+
+	// Wait for the authorization code or timeout.
+	var code string
+	select {
+	case code = <-codeChan:
+		// Received the code.
+	case <-ctx.Done():
+		return fmt.Errorf("authentication timed out")
+	}
+	fmt.Println("Received code:", code)
+
+	// Exchange the code for tokens using the go-auth0 authentication package.
+	// ctx = context.TODO()
+	// authClient, err := authentication.New(ctx, "https://"+authDomain)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to authentication New: %w", err)
+	// }
+
+	// // This function is assumed to exist; adapt parameters as needed.
+	// token, err := authClient.ExchangeCodeForToken(clientID, verifier, code, redirectURI)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to exchange code for token: %w", err)
+	// }
+
+	// // Print the access token.
+	// fmt.Printf("Access Token: %s\n", token.AccessToken)
+	// // If your Auth0 configuration returns a GitHub token as an extra claim, extract it:
+	// if githubToken, ok := token.Extra("github_access_token").(string); ok && githubToken != "" {
+	// 	fmt.Printf("GitHub Token: %s\n", githubToken)
+	// } else {
+	// 	fmt.Println("GitHub token not found in the token response")
+	// }
+
+	return nil
 }
