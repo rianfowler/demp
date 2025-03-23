@@ -342,11 +342,6 @@ func authPKCE() error {
 	}
 	challenge := generateCodeChallenge(verifier)
 
-	// Build the Auth0 authorization URL with PKCE parameters.
-
-		figure out how to et the github token
-			maybe create an action that puts the github token on the claims
-	*/
 	baseURL := fmt.Sprintf("https://%s/authorize", authDomain)
 	u, err := url.Parse(baseURL)
 	if err != nil {
@@ -452,6 +447,14 @@ func authPKCE() error {
 	for key, value := range claims {
 		fmt.Printf("%s: %v\n", key, value)
 	}
+
+	ghtoken, ok := claims["https://ri.rianfowler.com/github_access_token"].(string)
+	if !ok {
+		log.Fatalf("Error retrieving ghtoken from claims")
+		return nil
+	}
+
+	saveToken(ghtoken)
 
 	// userID := "github|4998130"
 
