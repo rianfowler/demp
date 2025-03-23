@@ -2,6 +2,10 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,9 +13,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	keychain "github.com/keybase/go-keychain"
 	"github.com/spf13/cobra"
 )
@@ -21,6 +27,11 @@ const (
 	clientID      = "Iv23lioNIN937L1ok0Rd"
 	deviceCodeURL = "https://github.com/login/device/code"
 	tokenURL      = "https://github.com/login/oauth/access_token"
+	authDomain    = "burritops.us.auth0.com"           // e.g., "your-tenant.auth0.com"
+	auth0clientID = "o71WB9il2dm4vBFBk6KSgTcSWCKYDStn" // Your Auth0 application's client ID
+	redirectURI   = "http://localhost:8080/callback"
+	// Scopes should include those needed for authentication and for GitHub access.
+	scope = "openid profile email offline_access read:github"
 )
 
 type DeviceCodeResponse struct {
@@ -29,14 +40,6 @@ type DeviceCodeResponse struct {
 	VerificationURI string `json:"verification_uri"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
-}
-
-type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	Scope       string `json:"scope"`
-	Error       string `json:"error"`
-	// You can also add "error_description" if needed
 }
 
 func authCommand(cmd *cobra.Command, args []string) {
@@ -171,7 +174,7 @@ func reposCommand(cmd *cobra.Command, args []string) {
 }
 
 func main() {
-	rootCmd := &cobra.Command{Use: "ghcli"}
+	rootCmd := &cobra.Command{Use: "ri"}
 
 	authCmd := &cobra.Command{
 		Use:   "auth",
@@ -184,8 +187,16 @@ func main() {
 		Short: "Get authenticated user's repositories",
 		Run:   reposCommand,
 	}
+	// authpkceCmd is the Cobra command for authentication via PKCE.
+	authpkceCmd := &cobra.Command{
+		Use:   "authpkce",
+		Short: "Authenticate using interactive PKCE flow",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return authPKCE()
+		},
+	}
 
-	rootCmd.AddCommand(authCmd, reposCmd)
+	rootCmd.AddCommand(authCmd, reposCmd, authpkceCmd)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -244,4 +255,198 @@ func getToken() (string, error) {
 		return "", fmt.Errorf("no token found in keychain")
 	}
 	return string(results[0].Data), nil
+}
+
+// generateCodeVerifier creates a random code verifier.
+func generateCodeVerifier() (string, error) {
+	// Generate 32 random bytes.
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// generateCodeChallenge computes the SHA256 code challenge for the given verifier.
+func generateCodeChallenge(verifier string) string {
+	sha := sha256.New()
+	sha.Write([]byte(verifier))
+	sum := sha.Sum(nil)
+	return base64.RawURLEncoding.EncodeToString(sum)
+}
+
+// startLocalServer starts an HTTP server to listen for the OAuth callback.
+func startLocalServer(ctx context.Context, codeChan chan<- string) error {
+	mux := http.NewServeMux()
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
+
+	// Handle the callback endpoint.
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			http.Error(w, "No code in the request", http.StatusBadRequest)
+			return
+		}
+		fmt.Fprintf(w, "Authentication successful. You can close this window.")
+		codeChan <- code
+		// Shutdown the server in a goroutine.
+		go func() {
+			_ = server.Shutdown(context.Background())
+		}()
+	})
+
+	// Run the server in a goroutine.
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
+
+	// If the context is canceled (e.g. timeout), shut down the server.
+	go func() {
+		<-ctx.Done()
+		_ = server.Shutdown(context.Background())
+	}()
+
+	return nil
+}
+
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	IDToken      string `json:"id_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	Scope        string `json:"scope"`
+	Error        string `json:"error"`
+}
+
+// UserProfile represents a simplified version of the Auth0 user profile.
+// You can add more fields based on your needs.
+type UserProfile struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	// Include other fields as needed.
+}
+
+// authPKCE implements the interactive PKCE flow.
+func authPKCE() error {
+	// Generate PKCE verifier and challenge.
+	verifier, err := generateCodeVerifier()
+	if err != nil {
+		return fmt.Errorf("failed to generate code verifier: %w", err)
+	}
+	challenge := generateCodeChallenge(verifier)
+
+	baseURL := fmt.Sprintf("https://%s/authorize", authDomain)
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		panic(err)
+	}
+
+	// Build the query parameters.
+	q := u.Query()
+	q.Set("response_type", "code")
+	q.Set("client_id", auth0clientID)
+	q.Set("redirect_uri", redirectURI)
+	q.Set("scope", scope)
+	q.Set("code_challenge", challenge)
+	q.Set("code_challenge_method", "S256")
+	u.RawQuery = q.Encode()
+
+	// This is your fully constructed URL.
+	authURL := u.String()
+
+	// authURL := fmt.Sprintf("https://%s/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&code_challenge=%s&code_challenge_method=S256", authDomain, clientID, redirectURI, scope, challenge)
+
+	// Open the user's browser.
+	fmt.Println("Opening browser for authentication...")
+	// Note: "open" works on macOS; on Linux you might use "xdg-open", on Windows "start".
+	// TODO: add support for other OS's
+	if err := exec.Command("open", authURL).Start(); err != nil {
+		return fmt.Errorf("failed to open browser: %w", err)
+	}
+
+	// Start a local HTTP server to wait for the callback.
+	codeChan := make(chan string)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	if err := startLocalServer(ctx, codeChan); err != nil {
+		return fmt.Errorf("failed to start local server: %w", err)
+	}
+
+	// Wait for the authorization authorizationCode or timeout.
+	var authorizationCode string
+	select {
+	case authorizationCode = <-codeChan:
+		// Received the code.
+	case <-ctx.Done():
+		return fmt.Errorf("authentication timed out")
+	}
+	fmt.Println("Received code:", authorizationCode)
+
+	oauthUrl := "https://burritops.us.auth0.com/oauth/token"
+
+	// Build the query parameters.
+
+	p := url.Values{}
+	p.Set("grant_type", "authorization_code")
+	p.Set("client_id", auth0clientID)
+	p.Set("code_verifier", verifier)
+	p.Set("code", authorizationCode)
+	p.Set("redirect_uri", "http://localhost:8080")
+	p.Set("audience", "https://burritops.us.auth0.com/api/v2/")
+
+	payload := p.Encode()
+	fmt.Println("PAYLOAD: \n\n" + payload + "\n\n")
+
+	req, _ := http.NewRequest("POST", oauthUrl, strings.NewReader(payload))
+
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+
+	fmt.Println(res)
+	fmt.Println(string(body))
+
+	// Unmarshal the JSON response into a TokenResponse struct.
+	var tokenResp TokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		log.Fatalf("Error unmarshaling token response: %v", err)
+	}
+
+	fmt.Printf("Token response: %+v\n", tokenResp)
+
+	// Decode the JWT (for example, the ID token) without verifying its signature.
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenResp.IDToken, jwt.MapClaims{})
+	if err != nil {
+		log.Fatalf("Error parsing JWT token: %v", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		log.Fatalf("Error converting token claims to MapClaims")
+	}
+
+	fmt.Println("Decoded JWT Claims:")
+	for key, value := range claims {
+		fmt.Printf("%s: %v\n", key, value)
+	}
+
+	ghtoken, ok := claims["https://ri.rianfowler.com/github_access_token"].(string)
+	if !ok {
+		log.Fatalf("Error retrieving ghtoken from claims")
+		return nil
+	}
+
+	saveToken(ghtoken)
+
+	return nil
 }
