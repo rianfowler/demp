@@ -17,8 +17,9 @@ import (
 	"strings"
 	"time"
 
+	keychain "github.com/rianfowler/ri/internal/keychain"
+
 	"github.com/dgrijalva/jwt-go"
-	keychain "github.com/keybase/go-keychain"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +100,7 @@ func authCommand(cmd *cobra.Command, args []string) {
 			return
 		}
 		// Success: Echo the token (secure storage can be added later)
-		saveToken(token)
+		keychain.SaveToken(keychain.GitHubTokenType, token)
 		return
 	}
 	fmt.Println("Timed out waiting for authorization")
@@ -142,7 +143,7 @@ func pollForToken(deviceCode string) (string, error) {
 }
 
 func reposCommand(cmd *cobra.Command, args []string) {
-	token, err := getToken()
+	token, err := keychain.Token(keychain.GitHubTokenType)
 	if err != nil {
 		fmt.Println("No auth token. Run auth", err)
 		return
@@ -201,60 +202,8 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
 
-func saveToken(token string) {
-
-	// Using the service "com.rianfowler.ri" (derived from your app's module path) and
-	// account "gh-token" to identify the GitHub token.
-	item := keychain.NewItem()
-	item.SetSecClass(keychain.SecClassGenericPassword)
-	item.SetService("com.rianfowler.ri")
-	item.SetAccount("gh-token")
-	item.SetData([]byte(token))
-	item.SetLabel("GitHub Token for ri CLI")
-	item.SetAccessible(keychain.AccessibleWhenUnlocked)
-
-	// Attempt to add the item to the keychain.
-	err := keychain.AddItem(item)
-	if err != nil {
-		// If an item with the same attributes exists, update it instead.
-		if err == keychain.ErrorDuplicateItem {
-			// Build a query to find the existing item.
-			query := keychain.NewItem()
-			query.SetSecClass(keychain.SecClassGenericPassword)
-			query.SetService("com.rianfowler.ri")
-			query.SetAccount("gh-token")
-			// Update the existing item with new data.
-			err = keychain.UpdateItem(query, item)
-			if err != nil {
-				log.Fatalf("Failed to update existing keychain item: %v", err)
-			}
-			fmt.Println("Keychain item updated successfully.")
-		} else {
-			log.Fatalf("Failed to add keychain item: %v", err)
-		}
-	} else {
-		fmt.Println("Keychain item added successfully.")
-	}
-}
-
-func getToken() (string, error) {
-	query := keychain.NewItem()
-	query.SetSecClass(keychain.SecClassGenericPassword)
-	query.SetService("com.rianfowler.ri")
-	query.SetAccount("gh-token")
-	query.SetReturnData(true)
-	query.SetMatchLimit(keychain.MatchLimitOne)
-
-	results, err := keychain.QueryItem(query)
-	if err != nil {
-		return "", err
-	}
-	if len(results) == 0 {
-		return "", fmt.Errorf("no token found in keychain")
-	}
-	return string(results[0].Data), nil
+	// cmd.Execute()
 }
 
 // generateCodeVerifier creates a random code verifier.
@@ -333,120 +282,109 @@ type UserProfile struct {
 	// Include other fields as needed.
 }
 
-// authPKCE implements the interactive PKCE flow.
 func authPKCE() error {
-	// Generate PKCE verifier and challenge.
+	// Generate the PKCE code verifier and challenge.
 	verifier, err := generateCodeVerifier()
 	if err != nil {
-		return fmt.Errorf("failed to generate code verifier: %w", err)
+		return fmt.Errorf("generate code verifier: %w", err)
 	}
 	challenge := generateCodeChallenge(verifier)
 
+	// Construct the authorization URL.
 	baseURL := fmt.Sprintf("https://%s/authorize", authDomain)
-	u, err := url.Parse(baseURL)
+	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("parse base URL: %w", err)
 	}
+	query := parsedURL.Query()
+	query.Set("response_type", "code")
+	query.Set("client_id", auth0clientID)
+	query.Set("redirect_uri", redirectURI)
+	query.Set("scope", scope)
+	query.Set("code_challenge", challenge)
+	query.Set("code_challenge_method", "S256")
+	parsedURL.RawQuery = query.Encode()
+	authURL := parsedURL.String()
 
-	// Build the query parameters.
-	q := u.Query()
-	q.Set("response_type", "code")
-	q.Set("client_id", auth0clientID)
-	q.Set("redirect_uri", redirectURI)
-	q.Set("scope", scope)
-	q.Set("code_challenge", challenge)
-	q.Set("code_challenge_method", "S256")
-	u.RawQuery = q.Encode()
-
-	// This is your fully constructed URL.
-	authURL := u.String()
-
-	// authURL := fmt.Sprintf("https://%s/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&code_challenge=%s&code_challenge_method=S256", authDomain, clientID, redirectURI, scope, challenge)
-
-	// Open the user's browser.
-	fmt.Println("Opening browser for authentication...")
-	// Note: "open" works on macOS; on Linux you might use "xdg-open", on Windows "start".
-	// TODO: add support for other OS's
+	// Open the authorization URL in the user's default browser.
+	// Note: "open" works on macOS; consider supporting other OS's (e.g., "xdg-open" for Linux, "start" for Windows).
+	// TODO: add support for windows and better fallback
 	if err := exec.Command("open", authURL).Start(); err != nil {
-		return fmt.Errorf("failed to open browser: %w", err)
+		return fmt.Errorf("open browser: %w", err)
 	}
 
-	// Start a local HTTP server to wait for the callback.
+	// Start a local HTTP server to wait for the OAuth callback.
 	codeChan := make(chan string)
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
+
 	if err := startLocalServer(ctx, codeChan); err != nil {
-		return fmt.Errorf("failed to start local server: %w", err)
+		return fmt.Errorf("start local server: %w", err)
 	}
 
-	// Wait for the authorization authorizationCode or timeout.
-	var authorizationCode string
+	// Wait for the authorization code or timeout.
+	var authCode string
 	select {
-	case authorizationCode = <-codeChan:
+	case authCode = <-codeChan:
 		// Received the code.
 	case <-ctx.Done():
 		return fmt.Errorf("authentication timed out")
 	}
-	fmt.Println("Received code:", authorizationCode)
 
-	oauthUrl := "https://burritops.us.auth0.com/oauth/token"
+	// Prepare parameters for exchanging the authorization code for tokens.
+	tokenURL := "https://burritops.us.auth0.com/oauth/token"
+	params := url.Values{}
+	params.Set("grant_type", "authorization_code")
+	params.Set("client_id", auth0clientID)
+	params.Set("code_verifier", verifier)
+	params.Set("code", authCode)
+	params.Set("redirect_uri", "http://localhost:8080")
+	params.Set("audience", "https://burritops.us.auth0.com/api/v2/")
+	payload := params.Encode()
 
-	// Build the query parameters.
+	// Create and send the HTTP request.
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("create token request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	p := url.Values{}
-	p.Set("grant_type", "authorization_code")
-	p.Set("client_id", auth0clientID)
-	p.Set("code_verifier", verifier)
-	p.Set("code", authorizationCode)
-	p.Set("redirect_uri", "http://localhost:8080")
-	p.Set("audience", "https://burritops.us.auth0.com/api/v2/")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("execute token request: %w", err)
+	}
+	defer resp.Body.Close()
 
-	payload := p.Encode()
-	fmt.Println("PAYLOAD: \n\n" + payload + "\n\n")
-
-	req, _ := http.NewRequest("POST", oauthUrl, strings.NewReader(payload))
-
-	req.Header.Add("content-type", "application/x-www-form-urlencoded")
-
-	res, _ := http.DefaultClient.Do(req)
-
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-
-	fmt.Println(res)
-	fmt.Println(string(body))
-
-	// Unmarshal the JSON response into a TokenResponse struct.
-	var tokenResp TokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		log.Fatalf("Error unmarshaling token response: %v", err)
+	// Read and parse the token response.
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read token response: %w", err)
 	}
 
-	fmt.Printf("Token response: %+v\n", tokenResp)
+	var tokenResp TokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return fmt.Errorf("unmarshal token response: %w", err)
+	}
 
-	// Decode the JWT (for example, the ID token) without verifying its signature.
+	// Decode the ID token without verifying its signature.
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenResp.IDToken, jwt.MapClaims{})
 	if err != nil {
-		log.Fatalf("Error parsing JWT token: %v", err)
+		return fmt.Errorf("parse ID token: %w", err)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		log.Fatalf("Error converting token claims to MapClaims")
+		return fmt.Errorf("convert token claims to MapClaims")
 	}
 
-	fmt.Println("Decoded JWT Claims:")
-	for key, value := range claims {
-		fmt.Printf("%s: %v\n", key, value)
-	}
-
-	ghtoken, ok := claims["https://ri.rianfowler.com/github_access_token"].(string)
+	// Extract the GitHub access token from the JWT claims.
+	ghToken, ok := claims["https://ri.rianfowler.com/github_access_token"].(string)
 	if !ok {
-		log.Fatalf("Error retrieving ghtoken from claims")
-		return nil
+		return fmt.Errorf("retrieve GitHub token from claims")
 	}
 
-	saveToken(ghtoken)
-
+	// Save the GitHub token.
+	// keychain.SaveToken(keychain.GitHubToken, ghToken)
+	keychain.SaveToken(keychain.GitHubTokenType, ghToken)
 	return nil
 }
