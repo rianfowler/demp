@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	keychain "github.com/keybase/go-keychain"
 	"github.com/spf13/cobra"
 )
@@ -39,14 +40,6 @@ type DeviceCodeResponse struct {
 	VerificationURI string `json:"verification_uri"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
-}
-
-type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	Scope       string `json:"scope"`
-	Error       string `json:"error"`
-	// You can also add "error_description" if needed
 }
 
 func authCommand(cmd *cobra.Command, args []string) {
@@ -321,6 +314,25 @@ func startLocalServer(ctx context.Context, codeChan chan<- string) error {
 	return nil
 }
 
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	IDToken      string `json:"id_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	Scope        string `json:"scope"`
+	Error        string `json:"error"`
+}
+
+// UserProfile represents a simplified version of the Auth0 user profile.
+// You can add more fields based on your needs.
+type UserProfile struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	// Include other fields as needed.
+}
+
 // authPKCE implements the interactive PKCE flow.
 func authPKCE() error {
 	// Generate PKCE verifier and challenge.
@@ -331,11 +343,7 @@ func authPKCE() error {
 	challenge := generateCodeChallenge(verifier)
 
 	// Build the Auth0 authorization URL with PKCE parameters.
-	// https://burritops.us.auth0.com/authorize?response_type=code&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&client_id=o71WB9il2dm4vBFBk6KSgTcSWCKYDStn&redirect_uri=http://localhost:8080/callback&scope=openid%20profile&state=xyzABC123
-	/*
 
-		open this url
-		get the code back
 		figure out how to et the github token
 			maybe create an action that puts the github token on the claims
 	*/
@@ -376,37 +384,110 @@ func authPKCE() error {
 		return fmt.Errorf("failed to start local server: %w", err)
 	}
 
-	// Wait for the authorization code or timeout.
-	var code string
+	// Wait for the authorization authorizationCode or timeout.
+	var authorizationCode string
 	select {
-	case code = <-codeChan:
+	case authorizationCode = <-codeChan:
 		// Received the code.
 	case <-ctx.Done():
 		return fmt.Errorf("authentication timed out")
 	}
-	fmt.Println("Received code:", code)
+	fmt.Println("Received code:", authorizationCode)
 
-	// Exchange the code for tokens using the go-auth0 authentication package.
-	// ctx = context.TODO()
-	// authClient, err := authentication.New(ctx, "https://"+authDomain)
+	oauthUrl := "https://burritops.us.auth0.com/oauth/token"
+
+	// payload := strings.NewReader("grant_type=authorization_code&d
+	/*
+
+		- add post login action
+		- use management api with secret / client id we used in terminal to fetch token and then hit management api to pull github token out and into custom claim
+
+	*/
+
+	// Build the query parameters.
+
+	p := url.Values{}
+	p.Set("grant_type", "authorization_code")
+	p.Set("client_id", auth0clientID)
+	p.Set("code_verifier", verifier)
+	p.Set("code", authorizationCode)
+	p.Set("redirect_uri", "http://localhost:8080")
+	p.Set("audience", "https://burritops.us.auth0.com/api/v2/")
+
+	payload := p.Encode()
+	fmt.Println("PAYLOAD: \n\n" + payload + "\n\n")
+
+	req, _ := http.NewRequest("POST", oauthUrl, strings.NewReader(payload))
+
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+
+	fmt.Println(res)
+	fmt.Println(string(body))
+
+	// Unmarshal the JSON response into a TokenResponse struct.
+	var tokenResp TokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		log.Fatalf("Error unmarshaling token response: %v", err)
+	}
+
+	fmt.Printf("Token response: %+v\n", tokenResp)
+
+	// Decode the JWT (for example, the ID token) without verifying its signature.
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenResp.IDToken, jwt.MapClaims{})
+	if err != nil {
+		log.Fatalf("Error parsing JWT token: %v", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		log.Fatalf("Error converting token claims to MapClaims")
+	}
+
+	fmt.Println("Decoded JWT Claims:")
+	for key, value := range claims {
+		fmt.Printf("%s: %v\n", key, value)
+	}
+
+	// userID := "github|4998130"
+
+	// url := fmt.Sprintf("https://burritops.us.auth0.com/api/v2/users/%s", userID)
+	// req, err = http.NewRequest("GET", url, nil)
 	// if err != nil {
-	// 	return fmt.Errorf("failed to authentication New: %w", err)
+	// 	return fmt.Errorf("failed to create request: %v", err)
 	// }
 
-	// // This function is assumed to exist; adapt parameters as needed.
-	// token, err := authClient.ExchangeCodeForToken(clientID, verifier, code, redirectURI)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to exchange code for token: %w", err)
-	// }
+	// 	println("Bearer " + mgmtToken)
 
-	// // Print the access token.
-	// fmt.Printf("Access Token: %s\n", token.AccessToken)
-	// // If your Auth0 configuration returns a GitHub token as an extra claim, extract it:
-	// if githubToken, ok := token.Extra("github_access_token").(string); ok && githubToken != "" {
-	// 	fmt.Printf("GitHub Token: %s\n", githubToken)
-	// } else {
-	// 	fmt.Println("GitHub token not found in the token response")
-	// }
+	// 	// Set the Authorization header with the Management API token.
+	// 	req.Header.Add("Authorization", "Bearer "+mgmtToken)
+	// 	req.Header.Add("Content-Type", "application/json")
+
+	// 	client := &http.Client{Timeout: 10 * time.Second}
+	// 	resp, err := client.Do(req)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to execute request: %v", err)
+	// 	}
+	// 	defer resp.Body.Close()
+
+	// 	// Check that we got a 200 OK status.
+	// 	if resp.StatusCode != http.StatusOK {
+	// 		bodyBytes, _ := io.ReadAll(resp.Body)
+	// 		return fmt.Errorf("failed to get user profile: status %d, body: %s", resp.StatusCode, string(bodyBytes))
+	// 	}
+
+	// 	var profile UserProfile
+	// 	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+	// 		return fmt.Errorf("failed to decode response: %v", err)
+	// 	}
+
+	// 	fmt.Printf("profile: %s ", profile)
+
+	// d
 
 	return nil
 }
