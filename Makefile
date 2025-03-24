@@ -2,13 +2,13 @@ i.PHONY: build
 build:
 	go build -o bin/ri
 
-.PHONY: auth
-auth:
-	go run main.go auth
+.PHONY: device
+device:
+	go run main.go auth device
 
 .PHONY: authpkce
 authpkce:
-	go run main.go authpkce
+	go run main.go auth pkce
 
 
 .PHONY: repos
