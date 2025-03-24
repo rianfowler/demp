@@ -33,7 +33,7 @@ sequenceDiagram
 
 ## authpkce
 
-Assume a couple of thinks with this PKCE flow:
+Assume a couple of things with this PKCE flow:
 
 - User can only login with GitHub via Auth0
 - Auth0 runs a post login action to save the GitHub access token as a custom claim on the Auth0 jwt
