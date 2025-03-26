@@ -10,6 +10,9 @@ device:
 authpkce:
 	go run main.go auth pkce
 
+.PHONY: authazure
+authazure:
+	go run main.go auth azure-pkce
 
 .PHONY: repos
 repos:

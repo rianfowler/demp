@@ -24,7 +24,8 @@ const (
 	// Replace with your OAuth app’s client ID
 	authDomain    = "burritops.us.auth0.com"           // e.g., "your-tenant.auth0.com"
 	auth0clientID = "o71WB9il2dm4vBFBk6KSgTcSWCKYDStn" // Your Auth0 application's client ID
-	redirectURI   = "http://localhost:8080/callback"
+	// redirectURI   = "http://localhost:8080/callback"
+	redirectURI = "http://localhost:8080"
 	// Scopes should include those needed for authentication and for GitHub access.
 	scope = "openid profile email offline_access read:github"
 )
@@ -191,7 +192,7 @@ func startLocalServer(ctx context.Context, codeChan chan<- string) error {
 	}
 
 	// Handle the callback endpoint.
-	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		if code == "" {
 			http.Error(w, "No code in the request", http.StatusBadRequest)

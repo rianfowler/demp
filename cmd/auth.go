@@ -17,6 +17,7 @@ var authCmd = &cobra.Command{
 func init() {
 	authCmd.AddCommand(pkceCmd)
 	authCmd.AddCommand(deviceCmd)
+	authCmd.AddCommand(azurePKCECmd)
 
 	rootCmd.AddCommand(authCmd)
 }
