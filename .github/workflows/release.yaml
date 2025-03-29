@@ -104,6 +104,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PATH: ${{ secrets.GH_PAT }}
 
   test:
     needs: [release, version]
