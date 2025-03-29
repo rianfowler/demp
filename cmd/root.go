@@ -9,7 +9,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "ri",
+	Use:   "demp",
 	Short: "Rian's CLI",
 	// Default action when no subcommand is provided.
 	Run: func(cmd *cobra.Command, args []string) {

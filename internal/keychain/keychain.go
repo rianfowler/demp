@@ -46,7 +46,7 @@ func SaveToken(tokenType TokenType, token string) error {
 
 	item := keychain.NewItem()
 	item.SetSecClass(keychain.SecClassGenericPassword)
-	item.SetService("com.rianfowler.ri")
+	item.SetService("com.rianfowler.demp")
 	item.SetAccount(ttd.account)
 	item.SetData([]byte(token))
 	item.SetLabel(ttd.label)
@@ -60,7 +60,7 @@ func SaveToken(tokenType TokenType, token string) error {
 			// Build a query to find the existing item.
 			query := keychain.NewItem()
 			query.SetSecClass(keychain.SecClassGenericPassword)
-			query.SetService("com.rianfowler.ri")
+			query.SetService("com.rianfowler.demp")
 			query.SetAccount(ttd.account)
 			// Update the existing item with new data.
 			err = keychain.UpdateItem(query, item)
@@ -86,7 +86,7 @@ func Token(tokenType TokenType) (string, error) {
 
 	query := keychain.NewItem()
 	query.SetSecClass(keychain.SecClassGenericPassword)
-	query.SetService("com.rianfowler.ri")
+	query.SetService("com.rianfowler.demp")
 	query.SetAccount(ttd.account)
 	query.SetReturnData(true)
 	query.SetMatchLimit(keychain.MatchLimitOne)

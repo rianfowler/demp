@@ -1,6 +1,6 @@
 i.PHONY: build
 build:
-	go build -o bin/ri
+	go build -o bin/demp
 
 .PHONY: device
 device:

@@ -122,6 +122,6 @@ jobs:
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: Install CLI from release
         run: |
-          go install github.com/rianfowler/ri@${{ needs.version.outputs.version }}
+          go install github.com/rianfowler/demp@${{ needs.version.outputs.version }}
       - name: Verify CLI --help output
-        run: ri --help
+        run: demp --help

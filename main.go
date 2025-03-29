@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/rianfowler/ri/cmd"
+	"github.com/rianfowler/demp/cmd"
 )
 
 func main() {

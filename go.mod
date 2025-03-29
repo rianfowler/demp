@@ -1,4 +1,4 @@
-module github.com/rianfowler/ri
+module github.com/rianfowler/demp
 
 go 1.24.0
 

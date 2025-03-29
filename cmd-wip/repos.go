@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	keychain "github.com/rianfowler/ri/internal/keychain"
+	keychain "github.com/rianfowler/demp/internal/keychain"
 	"github.com/spf13/cobra"
 )
 
