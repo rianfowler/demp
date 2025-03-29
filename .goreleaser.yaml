@@ -1,0 +1,7 @@
+dockers:
+  - image_templates:
+      - "rianfowler/ri:{{ .Tag }}"
+    dockerfile: Dockerfile
+    # Optionally, pass build arguments or specify other settings:
+    build_flag_templates:
+      - "--build-arg=VERSION={{ .Tag }}"

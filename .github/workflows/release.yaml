@@ -1,0 +1,77 @@
+name: Release and Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      major:
+        description: 'Major version'
+        required: true
+        default: '1'
+      minor:
+        description: 'Minor version'
+        required: true
+        default: '0'
+      patch:
+        description: 'Patch version'
+        required: true
+        default: '0'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+    steps:
+      - name: Determine Version
+        id: set_version
+        run: |
+          VERSION="v${{ github.event.inputs.major }}.${{ github.event.inputs.minor }}.${{ github.event.inputs.patch }}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Releasing version: ${VERSION}"
+
+  release:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Create Git Tag
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git tag ${{ needs.version.outputs.version }}
+          git push origin ${{ needs.version.outputs.version }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_USERNAME: rianfowler
+          DOCKER_PAT: ${{ secrets.DOCKERHUB_PAT }}
+
+  test:
+    needs: [version, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Install CLI from release
+        run: |
+          go install github.com/rianfowler/ri@${{ needs.version.outputs.version }}
+
+      - name: Verify CLI --help output
+        run: ri --help
