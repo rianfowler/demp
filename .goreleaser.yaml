@@ -72,4 +72,5 @@ builds:
 dockers:
   - image_templates:
       - "rianfowler/ri:{{ .Tag }}"
+      - "rianfowler/ri:latest"
     dockerfile: Dockerfile
