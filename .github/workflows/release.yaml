@@ -86,7 +86,7 @@ jobs:
       - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --rm-dist --update
+          args: release --update
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_USERNAME: rianfowler
