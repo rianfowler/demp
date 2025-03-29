@@ -73,7 +73,3 @@ dockers:
   - image_templates:
       - "rianfowler/ri:{{ .Tag }}"
     dockerfile: Dockerfile
-    # Use only the Linux builds for the Docker image
-    builds:
-      - linux_amd64
-      - linux_arm64
