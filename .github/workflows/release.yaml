@@ -3,18 +3,10 @@ name: Release and Test
 on:
   workflow_dispatch:
     inputs:
-      major:
-        description: 'Major version'
+      bump:
+        description: 'Which part to bump: major, minor, or patch'
         required: true
-        default: '1'
-      minor:
-        description: 'Minor version'
-        required: true
-        default: '0'
-      patch:
-        description: 'Patch version'
-        required: true
-        default: '0'
+        default: 'patch'
 
 jobs:
   version:
@@ -22,12 +14,50 @@ jobs:
     outputs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
-      - name: Determine Version
+      - name: Fetch latest release tag
+        id: fetch_release
+        run: |
+          echo "Fetching latest release..."
+          LATEST_TAG=$(curl -s -H "Accept: application/vnd.github+json" https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest | jq -r .tag_name)
+          echo "Latest release tag: $LATEST_TAG"
+          if [ "$LATEST_TAG" == "null" ] || [ -z "$LATEST_TAG" ]; then
+            echo "No release found. Setting baseline version to v0.0.0"
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Determine new version
         id: set_version
         run: |
-          VERSION="v${{ github.event.inputs.major }}.${{ github.event.inputs.minor }}.${{ github.event.inputs.patch }}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Releasing version: ${VERSION}"
+          # Remove leading 'v' from LATEST_TAG
+          VERSION_NUM=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NUM"
+          echo "Current version: $MAJOR.$MINOR.$PATCH"
+          BUMP="${{ github.event.inputs.bump }}"
+          case "$BUMP" in
+            major)
+              NEW_MAJOR=$((MAJOR + 1))
+              NEW_MINOR=0
+              NEW_PATCH=0
+              ;;
+            minor)
+              NEW_MAJOR=$MAJOR
+              NEW_MINOR=$((MINOR + 1))
+              NEW_PATCH=0
+              ;;
+            patch)
+              NEW_MAJOR=$MAJOR
+              NEW_MINOR=$MINOR
+              NEW_PATCH=$((PATCH + 1))
+              ;;
+            *)
+              echo "Invalid bump input: $BUMP"
+              exit 1
+              ;;
+          esac
+          NEW_VERSION="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+          echo "New version will be: ${NEW_VERSION}"
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
   release:
     needs: version
