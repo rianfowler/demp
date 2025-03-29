@@ -1,11 +1,15 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
 project_name: ri
 
 builds:
   # Build for macOS ARM (Apple Silicon)
   - id: mac_arm
     main: main.go
-    goos: darwin
-    goarch: arm64
+    goos:
+      - darwin
+    goarch:
+      - arm64
     binary: ri
     env:
       - CGO_ENABLED=1
