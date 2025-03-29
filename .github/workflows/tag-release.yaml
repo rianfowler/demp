@@ -77,3 +77,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Dispatch repository event
+      run: |
+        gh api repos/${{ github.repository }}/dispatches \
+          --field event_type=release_created \
+          --field client_payload='{"version": "${{ needs.version.outputs.version }}"}'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,11 @@
-dockers:
-  - image_templates:
-      - "rianfowler/ri:{{ .Tag }}"
-    dockerfile: Dockerfile
-    # Optionally, pass build arguments or specify other settings:
-    build_flag_templates:
-      - "--build-arg=VERSION={{ .Tag }}"
+project_name: ri
+
+builds:
+  # Build for macOS ARM (Apple Silicon)
+  - id: mac_arm
+    main: main.go
+    goos: darwin
+    goarch: arm64
+    binary: ri
+    env:
+      - CGO_ENABLED=1
