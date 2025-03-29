@@ -13,6 +13,7 @@ on:
 
 jobs:
   version:
+    name: Determine new version
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.set_version.outputs.version }}
@@ -63,6 +64,7 @@ jobs:
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
   tag:
     runs-on: ubuntu-latest
+    name: Tag ${{ needs.version.outputs.version }}
     needs: version
     steps:
     - name: Checkout repository
@@ -79,6 +81,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    name: Release ${{ needs.version.outputs.version }}
     needs: [tag, version]
     steps:
       - name: Checkout repository
@@ -103,6 +106,7 @@ jobs:
 
   test:
     needs: [release, version]
+    name: Smoke test ${{ needs.version.outputs.version }}
     runs-on: ubuntu-latest
     steps:
       - name: Setup Go
