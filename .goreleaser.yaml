@@ -91,7 +91,7 @@ brews:
       owner: rianfowler
       name: homebrew-ri
       branch: main
-      token: "{{ .Env.GH_PAT }}"
+      token: "{{ .Env.GITHUB_PERSONAL_AUTH_TOKEN }}"
       pull_request:
         enabled: true
         draft: true
