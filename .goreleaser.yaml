@@ -3,8 +3,19 @@ version: 2
 project_name: ri
 
 builds:
+  # Build for macOS AMD64
+  - id: darwin_amd64
+    main: main.go
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    binary: ri
+    env:
+      - CGO_ENABLED=1
+
   # Build for macOS ARM (Apple Silicon)
-  - id: mac_arm
+  - id: darwin_arm64
     main: main.go
     goos:
       - darwin
@@ -13,3 +24,56 @@ builds:
     binary: ri
     env:
       - CGO_ENABLED=1
+
+  # Build for Linux AMD64 (used for CLI distribution and Docker)
+  - id: linux_amd64
+    main: main.go
+    goos:
+      - linux
+    goarch:
+      - amd64
+    binary: ri
+    env:
+      - CGO_ENABLED=0
+
+  # Build for Linux ARM64 (used for CLI distribution and Docker)
+  - id: linux_arm64
+    main: main.go
+    goos:
+      - linux
+    goarch:
+      - arm64
+    binary: ri
+    env:
+      - CGO_ENABLED=0
+
+  # Build for Windows AMD64
+  - id: windows_amd64
+    main: main.go
+    goos:
+      - windows
+    goarch:
+      - amd64
+    binary: ri.exe
+    env:
+      - CGO_ENABLED=0
+
+  # Build for Windows ARM (Windows on ARM64)
+  - id: windows_arm64
+    main: main.go
+    goos:
+      - windows
+    goarch:
+      - arm64
+    binary: ri.exe
+    env:
+      - CGO_ENABLED=0
+
+dockers:
+  - image_templates:
+      - "rianfowler/ri:{{ .Tag }}"
+    dockerfile: Dockerfile
+    # Use only the Linux builds for the Docker image
+    builds:
+      - linux_amd64
+      - linux_arm64

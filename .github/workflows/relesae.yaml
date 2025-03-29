@@ -102,7 +102,7 @@ jobs:
           DOCKER_PAT: ${{ secrets.DOCKERHUB_PAT }}
 
   test:
-    needs: release
+    needs: [release, version]
     runs-on: ubuntu-latest
     steps:
       - name: Setup Go
@@ -113,6 +113,6 @@ jobs:
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: Install CLI from release
         run: |
-          go install github.com/rianfowler/ri@${{ github.ref }}
+          go install github.com/rianfowler/ri@${{ needs.version.outputs.version }}
       - name: Verify CLI --help output
         run: ri --help
