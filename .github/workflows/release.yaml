@@ -71,20 +71,19 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Create Git Tag
+      - name: Create Release using GH CLI
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          # Reconfigure the origin URL with the token for authentication
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git tag ${{ needs.version.outputs.version }}
-          git push origin ${{ needs.version.outputs.version }}
+          gh release create ${{ needs.version.outputs.version }} \
+            --title "Release ${{ needs.version.outputs.version }}" \
+            --notes "Release notes for version ${{ needs.version.outputs.version }}" \
+            --target ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-      - name: Run GoReleaser
+      - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v2
         with:
-          args: release --rm-dist
+          args: release --rm-dist --update
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_USERNAME: rianfowler
@@ -98,13 +97,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.24'
-
       - name: Add Go bin to PATH
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
-
       - name: Install CLI from release
         run: |
           go install github.com/rianfowler/ri@${{ needs.version.outputs.version }}
-
       - name: Verify CLI --help output
         run: ri --help
