@@ -95,6 +95,9 @@ jobs:
         with:
           go-version: '1.24'
 
+      - name: Docker Login
+        run: docker login -u rianfowler -p ${{ secrets.DOCKERHUB_PAT }}
+
       - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v6
         with:
