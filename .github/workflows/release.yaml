@@ -104,8 +104,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCKER_USERNAME: rianfowler
-          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_PAT }}
 
   test:
     needs: [release, version]
