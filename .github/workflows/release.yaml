@@ -75,8 +75,11 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+          # Reconfigure the origin URL with the token for authentication
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git tag ${{ needs.version.outputs.version }}
           git push origin ${{ needs.version.outputs.version }}
+
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
