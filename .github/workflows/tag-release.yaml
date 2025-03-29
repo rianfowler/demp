@@ -1,4 +1,4 @@
-name: Release and Test
+name: Tag Release
 
 permissions:
     contents: write
@@ -61,49 +61,15 @@ jobs:
           NEW_VERSION="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
           echo "New version will be: ${NEW_VERSION}"
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-
-  release:
-    needs: version
+  tag:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Create Release using GH CLI
+      run: |
+        gh release create ${{ needs.version.outputs.version }} \
+          --title "Release ${{ needs.version.outputs.version }}" \
+          --notes "Release notes for version ${{ needs.version.outputs.version }}" \
+          --target ${{ github.sha }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24'
-
-      - name: Create Release using GH CLI
-        run: |
-          gh release create ${{ needs.version.outputs.version }} \
-            --title "Release ${{ needs.version.outputs.version }}" \
-            --notes "Release notes for version ${{ needs.version.outputs.version }}" \
-            --target ${{ github.sha }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run GoReleaser to attach assets
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCKER_USERNAME: rianfowler
-          DOCKER_PAT: ${{ secrets.DOCKERHUB_PAT }}
-
-  test:
-    needs: [version, release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24'
-      - name: Add Go bin to PATH
-        run: echo "$HOME/go/bin" >> $GITHUB_PATH
-      - name: Install CLI from release
-        run: |
-          go install github.com/rianfowler/ri@${{ needs.version.outputs.version }}
-      - name: Verify CLI --help output
-        run: ri --help
