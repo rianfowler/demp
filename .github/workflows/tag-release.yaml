@@ -63,6 +63,7 @@ jobs:
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
   tag:
     runs-on: ubuntu-latest
+    needs: version
     steps:
     - name: Create Release using GH CLI
       run: |
