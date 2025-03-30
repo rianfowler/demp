@@ -181,10 +181,11 @@ jobs:
       - name: Delete Docker Tag via API
         env:
           DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
+          TARGET_VERSION: ${{ needs.version.outputs.version }}
         run: |
-          echo "Deleting Docker tag ${{ needs.version.outputs.version }}..."
-          curl -X DELETE -u rianfowler:DOCKERHUB_PAT \
-            "https://hub.docker.com/v2/repositories/rianfowler/demp/tags/${{ needs.version.outputs.version }}/"
+          echo "Deleting Docker tag ${TARGET_VERSION}..."
+          curl -X DELETE -u rianfowler:${DOCKERHUB_PAT} \
+            "https://hub.docker.com/v2/repositories/rianfowler/demp/tags/${TARGET_VERSION}/"
 
       - name: Output Warning for Homebrew Formula
         run: |
