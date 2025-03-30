@@ -126,23 +126,31 @@ jobs:
           username: rianfowler
           password: ${{ secrets.DOCKERHUB_PAT }}
 
-      - name: Import GPG key and set trust
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_FINGERPRINT: ${{ env.GPG_FINGERPRINT }}
-        run: |
-          echo "$GPG_PRIVATE_KEY" | gpg2 --batch --import
-          # Create a temporary file with the trust setting (6 means ultimate trust)
-          echo "$GPG_FINGERPRINT:6:" > ownertrust.txt
-          gpg2 --import-ownertrust < ownertrust.txt
-          rm ownertrust.txt
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      # - name: Import GPG key and set trust
+      #   env:
+      #     GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      #     GPG_FINGERPRINT: ${{ env.GPG_FINGERPRINT }}
+      #   run: |
+      #     echo "$GPG_PRIVATE_KEY" | gpg2 --batch --import
+      #     # Create a temporary file with the trust setting (6 means ultimate trust)
+      #     echo "$GPG_FINGERPRINT:6:" > ownertrust.txt
+      #     gpg2 --import-ownertrust < ownertrust.txt
+      #     rm ownertrust.txt
 
       - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PERSONAL_AUTH_TOKEN: ${{ secrets.GH_PAT }}
-          GPG_FINGERPRINT: ${{ env.GPG_FINGERPRINT }}
+          GPG_FINGERPRINT_OLD: ${{ env.GPG_FINGERPRINT }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
         with:
           args: release
 
