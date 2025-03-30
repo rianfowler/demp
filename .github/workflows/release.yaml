@@ -19,6 +19,19 @@ on:
         default: 'patch'
 
 jobs:
+  install-demp:
+    name: install and test demp install action
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install demp CLI
+        uses: rianfowler/action-install-demp@v0.0.1
+        with:
+          version: 'v0.1.6'
+
+      - name: Test demp
+        run: |
+          demp --help
+
   version:
     name: Determine new version
     runs-on: ubuntu-latest
