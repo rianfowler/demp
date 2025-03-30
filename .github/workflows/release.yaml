@@ -172,19 +172,19 @@ jobs:
           fetch-depth: 0  # fetch full history including tags
 
       - name: Delete GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Deleting release ${{ needs.version.outputs.version }} due to failure..."
           gh release delete ${{ needs.version.outputs.version }} --yes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Delete Docker Tag via API
-        run: |
-          echo "Deleting Docker tag ${{ needs.version.outputs.version }}..."
-          curl -X DELETE -u rianfowler:${{ secrets.DOCKERHUB_PAT }} \
-            "https://hub.docker.com/v2/repositories/rianfowler/demp/tags/${{ needs.version.outputs.version }}/"
         env:
           DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
+        run: |
+          echo "Deleting Docker tag ${{ needs.version.outputs.version }}..."
+          curl -X DELETE -u rianfowler:DOCKERHUB_PAT \
+            "https://hub.docker.com/v2/repositories/rianfowler/demp/tags/${{ needs.version.outputs.version }}/"
 
       - name: Output Warning for Homebrew Formula
         run: |
