@@ -204,3 +204,41 @@ After verifying the GPG signature, you can verify the binary integrity:
 3. **Compare the two values:**
    If they match, the file hasn’t been tampered with.
 
+---
+
+## Installing with the GitHub Action
+
+You can easily install and test **demp** using our official GitHub Action. Just add the following step to your workflow:
+
+```yaml
+install-demp:
+  name: Install and Test demp CLI
+  runs-on: ubuntu-latest
+  steps:
+    - name: Install demp CLI
+      uses: rianfowler/actions-install-demp@v0.0.3
+      with:
+        version: '0.1.6'
+```
+
+This action downloads the specified version of the **demp** binary (in this case, version `0.1.6`), verifies it using checksums and GPG signatures, and installs it in your environment. It's a simple way to ensure you're running a verified and secure release of the CLI as part of your CI/CD pipeline.
+
+---
+
+## Running demp from Docker Hub
+
+If you prefer using containerized workflows or simply want to run **demp** in an isolated environment, you can use the official Docker image available on Docker Hub:
+
+```bash
+docker run --rm rianfowler/demp:latest <command>
+```
+
+Replace `<command>` with the desired **demp** command. For example, to display help information:
+
+```bash
+docker run --rm rianfowler/demp:latest --help
+```
+
+This approach pulls the latest verified release of **demp** from Docker Hub, ensuring a consistent environment regardless of your host OS. Use this method for quick testing or when integrating **demp** into container-based workflows.
+
+---
