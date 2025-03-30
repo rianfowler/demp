@@ -188,4 +188,5 @@ jobs:
 
       - name: Output Warning for Homebrew Formula
         run: |
-          echo "WARNING: Release ${{ needs.version.outputs.version }} failed. The Homebrew formula may be invalid and needs to be updated with a patch version."
+          echo "### WARNING: Release ${{ needs.version.outputs.version }} failed" >> $GITHUB_STEP_SUMMARY
+          echo "The Homebrew formula may be invalid and needs to be updated with a patch version." >> $GITHUB_STEP_SUMMARY
