@@ -129,7 +129,7 @@ jobs:
       - name: Import GPG key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_FINGERPRINT: ${{ github.env.GPG_FINGERPRINT }}
+          GPG_FINGERPRINT: ${{ env.GPG_FINGERPRINT }}
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg2 --import
           # Optionally, set the key's trust level (here trusting fully)
