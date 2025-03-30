@@ -218,7 +218,7 @@ install-demp:
     - name: Install demp CLI
       uses: rianfowler/actions-install-demp@v0.0.3
       with:
-        version: '0.1.6'
+        version: '0.1.13'
 ```
 
 This action downloads the specified version of the **demp** binary (in this case, version `0.1.6`), verifies it using checksums and GPG signatures, and installs it in your environment. It's a simple way to ensure you're running a verified and secure release of the CLI as part of your CI/CD pipeline.
