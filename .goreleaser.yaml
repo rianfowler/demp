@@ -76,16 +76,21 @@ dockers:
     dockerfile: Dockerfile
 
 signs:
+signs:
   - artifacts: checksum
     cmd: gpg2
     args:
-      - "--batch" # Runs GPG2 in non-interactive mode. This is essential for CI/CD environments.
+      - "--batch"
+      - "--pinentry-mode"
+      - "loopback"
+      - "--passphrase"
+      - "{{ .Env.GPG_PASSPHRASE }}"
       - "-u"
-      - "{{ .Env.GPG_FINGERPRINT }}" # Specifies the signing key. The placeholder {{ .Env.GPG_FINGERPRINT }} will be replaced with the value of the GPG_FINGERPRINT environment variable. Make sure this variable is set in your CI/CD environment.
+      - "{{ .Env.GPG_FINGERPRINT }}"
       - "--output"
-      - "${signature}" # Tells GPG2 where to write the generated signature. GoReleaser will automatically substitute ${signature} with the correct output filename (usually something like artifact.asc).
-      - "--detach-sign" # Instructs GPG2 to generate a detached signature rather than embedding it in the file. This is standard practice for signing release artifacts.
-      - "${artifact}" # This is the path to the artifact (in this case, the checksum file) that GPG2 will sign. GoReleaser provides this variable during execution.
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
 
 brews:
   - name: demp
