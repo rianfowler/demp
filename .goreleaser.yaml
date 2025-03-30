@@ -80,17 +80,28 @@ signs:
     cmd: gpg2
     args:
       - "--batch"
-      - "--no-tty" # Prevents GPG2 from trying to access a TTY
-      - "--pinentry-mode"
-      - "loopback"
-      - "--passphrase"
-      - "{{ .Env.GPG_PASSPHRASE }}"
       - "-u"
       - "{{ .Env.GPG_FINGERPRINT }}"
       - "--output"
       - "${signature}"
       - "--detach-sign"
       - "${artifact}"
+# signs:
+#   - artifacts: checksum
+#     cmd: gpg2
+#     args:
+#       - "--batch"
+#       - "--no-tty" # Prevents GPG2 from trying to access a TTY
+#       - "--pinentry-mode"
+#       - "loopback"
+#       - "--passphrase"
+#       - "{{ .Env.GPG_PASSPHRASE }}"
+#       - "-u"
+#       - "{{ .Env.GPG_FINGERPRINT }}"
+#       - "--output"
+#       - "${signature}"
+#       - "--detach-sign"
+#       - "${artifact}"
 
 brews:
   - name: demp
