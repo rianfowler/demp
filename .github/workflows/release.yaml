@@ -26,7 +26,7 @@ jobs:
       - name: Install demp CLI
         uses: rianfowler/actions-install-demp@v0.0.1
         with:
-          version: 'v0.1.6'
+          version: '0.1.6'
 
       - name: Test demp
         run: |
