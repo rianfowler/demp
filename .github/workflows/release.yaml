@@ -1,5 +1,9 @@
 name: Release
 
+concurrency:
+  group: release-${{ github.repository }}-${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
     contents: write
 
@@ -148,3 +152,31 @@ jobs:
           go install github.com/rianfowler/demp@${{ needs.version.outputs.version }}
       - name: Verify CLI --help output
         run: demp --help
+
+
+  cleanup:
+    name: Cleanup Failed Release
+    runs-on: ubuntu-latest
+    needs: [version, release, test]
+    if: ${{ failure() }}
+    # This job always runs (even if previous ones fail) due to 'if: ${{ failure() }}'
+    # It cleans up the release artifacts if either the release or test jobs fail.
+    steps:
+      - name: Delete GitHub Release
+        run: |
+          echo "Deleting release ${{ needs.version.outputs.version }} due to failure..."
+          gh release delete ${{ needs.version.outputs.version }} --yes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete Docker Tag via API
+        run: |
+          echo "Deleting Docker tag ${{ needs.version.outputs.version }}..."
+          curl -X DELETE -u rianfowler:${{ secrets.DOCKERHUB_PAT }} \
+            "https://hub.docker.com/v2/repositories/rianfowler/demp/tags/${{ needs.version.outputs.version }}/"
+        env:
+          DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
+
+      - name: Output Warning for Homebrew Formula
+        run: |
+          echo "WARNING: Release ${{ needs.version.outputs.version }} failed. The Homebrew formula may be invalid and needs to be updated with a patch version."
