@@ -80,6 +80,9 @@ jobs:
           --target ${{ github.sha }}
 
   release:
+    permissions:
+      actions: read
+      contents: write
     runs-on: ubuntu-latest
     name: Release ${{ needs.version.outputs.version }}
     needs: [tag, version]
@@ -88,7 +91,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.version.outputs.version }}
-          fetch-depth: 0  # optional, fetch full history including all tags
+          fetch-depth: 0  # fetch full history including tags
 
       - name: Setup Go
         uses: actions/setup-go@v4
@@ -104,10 +107,22 @@ jobs:
       - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --clean
+          args: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PERSONAL_AUTH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: "./dist"
+          output-file: "sbom.spdx.json"
+          format: "spdx"
+
+      - name: Upload SBOM to Release
+        run: gh release upload ${{ needs.version.outputs.version }} sbom.spdx.json --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   test:
     needs: [release, version]
