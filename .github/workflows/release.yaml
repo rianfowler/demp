@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install demp CLI
-        uses: rianfowler/actions-install-demp@v0.0.2
+        uses: rianfowler/actions-install-demp@v0.0.3
         with:
           version: '0.1.6'
 
