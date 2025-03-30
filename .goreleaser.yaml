@@ -80,6 +80,7 @@ signs:
     cmd: gpg2
     args:
       - "--batch"
+      - "--no-tty" # Prevents GPG2 from trying to access a TTY
       - "--pinentry-mode"
       - "loopback"
       - "--passphrase"
