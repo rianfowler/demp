@@ -3,6 +3,9 @@ name: Release
 permissions:
     contents: write
 
+env:
+  SBOM_NAME: "${{ github.event.repository.name }}-sbom.spdx.json"
+
 on:
   workflow_dispatch:
     inputs:
@@ -116,11 +119,16 @@ jobs:
         uses: anchore/sbom-action@v0
         with:
           path: "./dist"
-          output-file: "sbom.spdx.json"
+          output-file: ${{ env.SBOM_NAME }}
           format: "spdx"
 
+      - name: Scan SBOM
+        uses: anchore/scan-action@v6
+        with:
+          sbom: ${{ env.SBOM_NAME }}
+
       - name: Upload SBOM to Release
-        run: gh release upload ${{ needs.version.outputs.version }} sbom.spdx.json --clobber
+        run: gh release upload ${{ needs.version.outputs.version }} ${{ env.SBOM_NAME }} --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
