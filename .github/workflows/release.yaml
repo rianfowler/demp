@@ -165,6 +165,12 @@ jobs:
     # This job always runs (even if previous ones fail) due to 'if: ${{ failure() }}'
     # It cleans up the release artifacts if either the release or test jobs fail.
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.version }}
+          fetch-depth: 0  # fetch full history including tags
+
       - name: Delete GitHub Release
         run: |
           echo "Deleting release ${{ needs.version.outputs.version }} due to failure..."
