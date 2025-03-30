@@ -9,6 +9,8 @@ permissions:
 
 env:
   SBOM_NAME: "${{ github.event.repository.name }}-sbom.spdx.json"
+  OPENGPG_KEY_ID: 092017BA1C395379
+  OPENGPG_FINGERPRINT: B3596D99AED95A4831F8E9A1092017BA1C395379
 
 on:
   workflow_dispatch:
@@ -124,13 +126,23 @@ jobs:
           username: rianfowler
           password: ${{ secrets.DOCKERHUB_PAT }}
 
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_FINGERPRINT: ${{ github.env.GPG_FINGERPRINT }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg2 --import
+          # Optionally, set the key's trust level (here trusting fully)
+          echo -e "5\ny\n" | gpg2 --command-fd 0 --edit-key "$GPG_FINGERPRINT" trust
+
       - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v6
-        with:
-          args: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PERSONAL_AUTH_TOKEN: ${{ secrets.GH_PAT }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        with:
+          args: release
 
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@v0
