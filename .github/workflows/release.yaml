@@ -138,6 +138,7 @@ jobs:
         uses: sigstore/cosign-installer@v3.8.1
 
       - name: Run GoReleaser to attach assets
+        id: goreleaser
         uses: goreleaser/goreleaser-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,6 +168,7 @@ jobs:
       - name: Get Image Digest
         id: get_digest
         run: |
+          echo "From Go releaser: ${{ needs.goreleaser.outputs.digest }}"
           # Pull the latest image to ensure you have it locally.
           docker pull rianfowler/demp:latest
           # Get the digest from the image.
