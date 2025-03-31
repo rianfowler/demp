@@ -28,7 +28,7 @@ jobs:
       - name: Install demp CLI
         uses: rianfowler/actions-install-demp@v1.0.3
         with:
-          version: '0.1.6'
+          version: '0.1.19'
 
       - name: Test demp
         run: |
@@ -192,8 +192,11 @@ jobs:
         run: |
           # Decode the base64-encoded private key and write it to a temporary file.
           echo "$COSIGN_PRIVATE_KEY" | base64 -d > /tmp/cosign.key
-          # Sign the image using the immutable digest.
-          cosign sign -y --key /tmp/cosign.key ${DIGEST}
+          # Construct the full image reference using the digest.
+          IMAGE_REF="rianfowler/demp@${DIGEST}"
+          echo "Signing image: ${IMAGE_REF}"
+          # Sign the image using cosign.
+          cosign sign -y --key /tmp/cosign.key ${IMAGE_REF}
 
   test:
     needs: [release, version]
