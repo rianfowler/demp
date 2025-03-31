@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install demp CLI
-        uses: rianfowler/actions-install-demp@v1.0.2
+        uses: rianfowler/actions-install-demp@v1.0.3
         with:
           version: '0.1.6'
 
@@ -165,17 +165,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Image Digest
+      - name: Get Image Digest from GoReleaser Artifacts
         id: get_digest
         run: |
-          echo "From Go releaser: ${{ steps.goreleaser.outputs.metadata }}"
-          echo "From Go releaser: ${{ steps.goreleaser.outputs.artifacts }}"
-          # Pull the latest image to ensure you have it locally.
-          docker pull rianfowler/demp:latest
-          # Get the digest from the image.
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' rianfowler/demp:latest)
-          echo "Digest: ${DIGEST}"
+          # Save the artifacts output (a JSON array) to a file
+          echo '${{ steps.goreleaser.outputs.artifacts }}' > artifacts.json
+          # Use jq to extract the digest from the artifact with type "Published Docker Image"
+          DIGEST=$(jq -r '.[] | select(.type=="Published Docker Image" and (.extra.Digest != null)) | .extra.Digest' artifacts.json | head -n 1)
+          echo "Image digest: ${DIGEST}"
           echo "::set-output name=digest::${DIGEST}"
+
+      - name: Update Release Notes with Image Digest
+        run: |
+          gh release edit ${{ needs.version.outputs.version }} \
+            --notes "Docker image available:
+          - Pull by tag: \`docker pull rianfowler/demp:latest\`
+          - **Recommended (immutable)**: \`docker pull rianfowler/demp@${{ steps.get_digest.outputs.digest }}\`"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sign Docker Image with Cosign
         env:
@@ -183,9 +190,9 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           DIGEST: ${{ steps.get_digest.outputs.digest }}
         run: |
-          # Decode and write cosign key (assuming base64 encoded in the secret)
+          # Decode the base64-encoded private key and write it to a temporary file.
           echo "$COSIGN_PRIVATE_KEY" | base64 -d > /tmp/cosign.key
-          # Use the digest output from the previous step for signing.
+          # Sign the image using the immutable digest.
           cosign sign -y --key /tmp/cosign.key ${DIGEST}
 
   test:
