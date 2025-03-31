@@ -170,10 +170,11 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}  # If your key is password-protected.
           TAG: ${{  needs.version.outputs.version }}
         run: |
-          # Sign the latest tag
-          cosign sign --key ${COSIGN_PRIVATE_KEY} rianfowler/demp:latest
-          # Sign the versioned tag
-          cosign sign --key ${COSIGN_PRIVATE_KEY} rianfowler/demp:${TAG}
+          # Decode the base64-encoded key and save it to a file
+          echo "$COSIGN_PRIVATE_KEY" | base64 -d > /tmp/cosign.key
+          # Sign the images
+          cosign sign --key /tmp/cosign.key rianfowler/demp:latest
+          cosign sign --key /tmp/cosign.key rianfowler/demp:${TAG}
 
   test:
     needs: [release, version]
