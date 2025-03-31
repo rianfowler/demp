@@ -17,7 +17,7 @@ func NewGithubCmd() *cobra.Command {
 	}
 
 	fetchCmd := &cobra.Command{
-		Use:   "fetch-latest-tag [repo]",
+		Use:   "latest-tag [repo]",
 		Short: "Fetch the latest release tag for the repository",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
