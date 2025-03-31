@@ -164,17 +164,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sign Docker Images with Cosign
+      - name: Get Image Digest
+        id: get_digest
+        run: |
+          # Pull the latest image to ensure you have it locally.
+          docker pull rianfowler/demp:latest
+          # Get the digest from the image.
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' rianfowler/demp:latest)
+          echo "Digest: ${DIGEST}"
+          echo "::set-output name=digest::${DIGEST}"
+
+      - name: Sign Docker Image with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}  # If your key is password-protected.
-          TAG: ${{  needs.version.outputs.version }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          # Decode the base64-encoded key and save it to a file
+          # Decode and write cosign key (assuming base64 encoded in the secret)
           echo "$COSIGN_PRIVATE_KEY" | base64 -d > /tmp/cosign.key
-          # Sign the images
-          cosign sign --key /tmp/cosign.key rianfowler/demp:latest
-          cosign sign --key /tmp/cosign.key rianfowler/demp:${TAG}
+          # Use the digest output from the previous step for signing.
+          cosign sign -y --key /tmp/cosign.key ${{ steps.get_digest.outputs.digest }}
+
 
   test:
     needs: [release, version]
