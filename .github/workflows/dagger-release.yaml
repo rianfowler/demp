@@ -36,3 +36,4 @@ jobs:
       - name: New release workflow
         run: |
           LATEST_TAG=$(demp github latest-tag rianfowler/demp)
+          echo latest version: $LATEST_TAG
