@@ -134,6 +134,9 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.8.1
+
       - name: Run GoReleaser to attach assets
         uses: goreleaser/goreleaser-action@v6
         env:
@@ -160,6 +163,17 @@ jobs:
         run: gh release upload ${{ needs.version.outputs.version }} ${{ env.SBOM_NAME }} --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign Docker Images with Cosign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}  # If your key is password-protected.
+          TAG: ${{  needs.version.outputs.version }}
+        run: |
+          # Sign the latest tag
+          cosign sign --key ${COSIGN_PRIVATE_KEY} rianfowler/demp:latest
+          # Sign the versioned tag
+          cosign sign --key ${COSIGN_PRIVATE_KEY} rianfowler/demp:${TAG}
 
   test:
     needs: [release, version]
