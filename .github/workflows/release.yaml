@@ -34,6 +34,19 @@ jobs:
         run: |
           demp --help
 
+  release-test:
+    name: Test new release pipeline using CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install demp CLI
+        uses: rianfowler/actions-install-demp@v1.0.3
+        with:
+          version: '0.1.22'
+
+      - name: New release workflow
+        run: |
+          LATEST_TAG=$(demp github latest-tag rianfowler/demp)
+
   version:
     name: Determine new version
     runs-on: ubuntu-latest

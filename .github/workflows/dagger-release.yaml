@@ -1,0 +1,38 @@
+name: Dagger Release
+
+concurrency:
+  group: release-${{ github.repository }}-${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+    contents: write
+
+env:
+  SBOM_NAME: "${{ github.event.repository.name }}-sbom.spdx.json"
+  GPG_KEY_ID: 092017BA1C395379
+  GPG_FINGERPRINT: B3596D99AED95A4831F8E9A1092017BA1C395379
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Which part to bump: major, minor, or patch'
+        required: true
+        default: 'patch'
+
+jobs:
+  install-demp:
+    name: install and test demp install action
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install demp CLI
+        uses: rianfowler/actions-install-demp@v1.0.3
+        with:
+          version: '0.1.19'
+
+      - name: New release workflow
+        run: |
+          LATEST_TAG=$(demp github latest-tag rianfowler/demp)
