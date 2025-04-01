@@ -4,6 +4,8 @@
 go build -o demp
 alias demp="./demp"
 
+ls -a
+
 LATEST_TAG=$(demp github latest-tag rianfowler/demp)
 echo latest version: $LATEST_TAG
 
