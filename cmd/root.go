@@ -22,6 +22,7 @@ func Execute() {
 	rootCmd.AddCommand(NewGithubCmd())
 	rootCmd.AddCommand(NewDaggerWorkflowCmd())
 	rootCmd.AddCommand(NewSemverCmd())
+	rootCmd.AddCommand(NewGoreleaserCmd())
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -68,24 +68,23 @@ builds:
     binary: demp.exe
     env:
       - CGO_ENABLED=0
+# dockers:
+#   - image_templates:
+#       - "rianfowler/demp:{{ .Tag }}"
+#       - "rianfowler/demp:latest"
+#     dockerfile: Dockerfile
 
-dockers:
-  - image_templates:
-      - "rianfowler/demp:{{ .Tag }}"
-      - "rianfowler/demp:latest"
-    dockerfile: Dockerfile
-
-signs:
-  - artifacts: checksum
-    cmd: gpg2
-    args:
-      - "--batch"
-      - "-u"
-      - "{{ .Env.GPG_FINGERPRINT }}"
-      - "--output"
-      - "${signature}"
-      - "--detach-sign"
-      - "${artifact}"
+# signs:
+#   - artifacts: checksum
+#     cmd: gpg2
+#     args:
+#       - "--batch"
+#       - "-u"
+#       - "{{ .Env.GPG_FINGERPRINT }}"
+#       - "--output"
+#       - "${signature}"
+#       - "--detach-sign"
+#       - "${artifact}"
 # signs:
 #   - artifacts: checksum
 #     cmd: gpg2
@@ -103,23 +102,23 @@ signs:
 #       - "--detach-sign"
 #       - "${artifact}"
 
-brews:
-  - name: demp
-    description: "A CLI tool for doing X, Y, and Z."
-    homepage: "https://github.com/rianfowler/demp"
-    license: "MIT"
-    test: |
-      system "#{bin}/demp", "--help"
-    commit_author:
-      name: "goreleaserbot"
-      email: "bot@goreleaser.com"
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    directory: Formula
-    repository:
-      owner: rianfowler
-      name: homebrew-demp
-      branch: main
-      token: "{{ .Env.GITHUB_PERSONAL_AUTH_TOKEN }}"
-      pull_request:
-        enabled: true
-        draft: true
+# brews:
+#   - name: demp
+#     description: "A CLI tool for doing X, Y, and Z."
+#     homepage: "https://github.com/rianfowler/demp"
+#     license: "MIT"
+#     test: |
+#       system "#{bin}/demp", "--help"
+#     commit_author:
+#       name: "goreleaserbot"
+#       email: "bot@goreleaser.com"
+#     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+#     directory: Formula
+#     repository:
+#       owner: rianfowler
+#       name: homebrew-demp
+#       branch: main
+#       token: "{{ .Env.GITHUB_PERSONAL_AUTH_TOKEN }}"
+#       pull_request:
+#         enabled: true
+#         draft: true

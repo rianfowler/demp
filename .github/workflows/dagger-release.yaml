@@ -28,12 +28,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install demp CLI
-        uses: rianfowler/actions-install-demp@v1.0.3
-        with:
-          version: '0.1.19'
-
-      - name: New release workflow
+      - name: Run release script
+        shell: bash
         run: |
-          LATEST_TAG=$(demp github latest-tag rianfowler/demp)
-          echo latest version: $LATEST_TAG
+          chmod +x "${{ github.action_path }}/release.sh"
+          "${{ github.action_path }}/release.sh"
+
