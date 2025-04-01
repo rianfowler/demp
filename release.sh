@@ -1,7 +1,8 @@
 
 #!/usr/bin/env bash
 
-go install .
+go build -o demp
+alias demp="./demp"
 
 LATEST_TAG=$(demp github latest-tag rianfowler/demp)
 echo latest version: $LATEST_TAG
