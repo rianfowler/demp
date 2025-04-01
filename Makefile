@@ -17,3 +17,7 @@ authazure:
 .PHONY: repos
 repos:
 	go run main.go repos
+
+.PHONY: release
+release:
+	./release.sh

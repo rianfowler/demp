@@ -21,6 +21,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	rootCmd.AddCommand(NewGithubCmd())
 	rootCmd.AddCommand(NewDaggerWorkflowCmd())
+	rootCmd.AddCommand(NewSemverCmd())
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
