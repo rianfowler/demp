@@ -42,7 +42,7 @@ and sets the GORELEASER_CURRENT_TAG environment variable to specify which tag to
 				// Set the tag via an environment variable.
 				WithEnvVariable("GORELEASER_CURRENT_TAG", tag).
 				// Run the goreleaser release command.
-				WithExec([]string{"goreleaser", "release", "--snapshot", "--clean"})
+				WithExec([]string{"goreleaser", "release", "--snapshot"})
 
 			// Execute the container command.
 			output, err := container.Stdout(ctx)
