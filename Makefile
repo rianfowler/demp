@@ -21,3 +21,7 @@ repos:
 .PHONY: release
 release:
 	./release.sh
+
+.PHONY: tidy
+tidy:
+	go mod tidy

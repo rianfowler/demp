@@ -1,4 +1,4 @@
-package cmd-wip
+package cmdwip
 
 import (
 	"fmt"
@@ -18,9 +18,9 @@ var reposCmd = &cobra.Command{
 	},
 }
 
-func init() {
-	rootCmd.AddCommand(reposCmd)
-}
+// func init() {
+// 	rootCmd.AddCommand(reposCmd)
+// }
 
 func repos() error {
 	token, err := keychain.Token(keychain.GitHubTokenType)

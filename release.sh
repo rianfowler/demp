@@ -3,6 +3,8 @@
 
 go build -o demp
 
+rm -rf dist
+
 LATEST_TAG=$(./demp github latest-tag rianfowler/demp)
 echo latest version: $LATEST_TAG
 

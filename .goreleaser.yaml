@@ -74,34 +74,17 @@ builds:
 #       - "rianfowler/demp:latest"
 #     dockerfile: Dockerfile
 
-# signs:
-#   - artifacts: checksum
-#     cmd: gpg2
-#     args:
-#       - "--batch"
-#       - "-u"
-#       - "{{ .Env.GPG_FINGERPRINT }}"
-#       - "--output"
-#       - "${signature}"
-#       - "--detach-sign"
-#       - "${artifact}"
-# signs:
-#   - artifacts: checksum
-#     cmd: gpg2
-#     args:
-#       - "--batch"
-#       - "--no-tty" # Prevents GPG2 from trying to access a TTY
-#       - "--pinentry-mode"
-#       - "loopback"
-#       - "--passphrase"
-#       - "{{ .Env.GPG_PASSPHRASE }}"
-#       - "-u"
-#       - "{{ .Env.GPG_FINGERPRINT }}"
-#       - "--output"
-#       - "${signature}"
-#       - "--detach-sign"
-#       - "${artifact}"
-
+signs:
+  - artifacts: checksum
+    cmd: gpg2
+    args:
+      - "--batch"
+      - "-u"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
 # brews:
 #   - name: demp
 #     description: "A CLI tool for doing X, Y, and Z."

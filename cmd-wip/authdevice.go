@@ -1,4 +1,4 @@
-package cmd-wip
+package cmdwip
 
 import (
 	"bytes"

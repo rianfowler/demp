@@ -1,4 +1,4 @@
-package cmd-wip
+package cmdwip
 
 import (
 	"fmt"
@@ -19,5 +19,5 @@ func init() {
 	authCmd.AddCommand(deviceCmd)
 	authCmd.AddCommand(azurePKCECmd)
 
-	rootCmd.AddCommand(authCmd)
+	// rootCmd.AddCommand(authCmd)
 }
