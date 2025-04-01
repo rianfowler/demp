@@ -31,6 +31,6 @@ jobs:
       - name: Run release script
         shell: bash
         run: |
-          chmod +x "${{ github.action_path }}/release.sh"
-          "${{ github.action_path }}/release.sh"
+          chmod +x release.sh
+          ./release.sh
 
