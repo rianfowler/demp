@@ -111,7 +111,7 @@ If GPG flags are provided, they will be used; otherwise, a fake key is generated
 					WithExec([]string{"mkdir", "-p", "/tmp/gpghome"}).
 					WithExec([]string{"gpg", "--import", "/fake/gpg/fakekey.asc"}).
 					WithUnixSocket("/var/run/docker.sock", dockerSocket).
-					WithExec([]string{"goreleaser", "release", "--snapshot"})
+					WithExec([]string{"goreleaser", "release", "--snapshot", "--skip", "docker,homebrew", "--verbose"})
 			}
 
 			// Execute the container command.
