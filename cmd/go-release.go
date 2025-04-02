@@ -97,6 +97,7 @@ If GPG flags are provided, they will be used; otherwise, a fake key is generated
 				}
 				// Create a virtual directory containing the fake key.
 				fakeKeyDir := client.Directory().WithNewFile("fakekey.asc", fakeKey)
+				dockerSocket := client.Host().UnixSocket("/var/run/docker.sock")
 
 				container = client.Container().
 					From("goreleaser/goreleaser:latest").
@@ -109,6 +110,7 @@ If GPG flags are provided, they will be used; otherwise, a fake key is generated
 					WithExec([]string{"apk", "add", "--no-cache", "gnupg"}).
 					WithExec([]string{"mkdir", "-p", "/tmp/gpghome"}).
 					WithExec([]string{"gpg", "--import", "/fake/gpg/fakekey.asc"}).
+					WithUnixSocket("/var/run/docker.sock", dockerSocket).
 					WithExec([]string{"goreleaser", "release", "--snapshot"})
 			}
 

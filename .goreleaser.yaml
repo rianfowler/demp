@@ -3,16 +3,16 @@ version: 2
 project_name: demp
 
 builds:
-  # Build for macOS AMD64
-  - id: darwin_amd64
-    main: main.go
-    goos:
-      - darwin
-    goarch:
-      - amd64
-    binary: demp
-    env:
-      - CGO_ENABLED=1
+  # # Build for macOS AMD64
+  # - id: darwin_amd64
+  #   main: main.go
+  #   goos:
+  #     - darwin
+  #   goarch:
+  #     - amd64
+  #   binary: demp
+  #   env:
+  #     - CGO_ENABLED=1
 
   # Build for macOS ARM (Apple Silicon)
   - id: darwin_arm64
@@ -47,32 +47,33 @@ builds:
     env:
       - CGO_ENABLED=0
 
-  # Build for Windows AMD64
-  - id: windows_amd64
-    main: main.go
-    goos:
-      - windows
-    goarch:
-      - amd64
-    binary: demp.exe
-    env:
-      - CGO_ENABLED=0
+  # # Build for Windows AMD64
+  # - id: windows_amd64
+  #   main: main.go
+  #   goos:
+  #     - windows
+  #   goarch:
+  #     - amd64
+  #   binary: demp.exe
+  #   env:
+  #     - CGO_ENABLED=0
 
-  # Build for Windows ARM (Windows on ARM64)
-  - id: windows_arm64
-    main: main.go
-    goos:
-      - windows
-    goarch:
-      - arm64
-    binary: demp.exe
-    env:
-      - CGO_ENABLED=0
-# dockers:
-#   - image_templates:
-#       - "rianfowler/demp:{{ .Tag }}"
-#       - "rianfowler/demp:latest"
-#     dockerfile: Dockerfile
+  # # Build for Windows ARM (Windows on ARM64)
+  # - id: windows_arm64
+  #   main: main.go
+  #   goos:
+  #     - windows
+  #   goarch:
+  #     - arm64
+  #   binary: demp.exe
+  #   env:
+  #     - CGO_ENABLED=0
+
+dockers:
+  - image_templates:
+      - "rianfowler/demp:{{ .Tag }}"
+      - "rianfowler/demp:latest"
+    dockerfile: Dockerfile
 
 signs:
   - artifacts: checksum
