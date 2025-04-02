@@ -114,7 +114,8 @@ After releasing, an SBOM (in SPDX format) is generated from the ./dist artifacts
 					WithExec([]string{"mkdir", "-p", "/tmp/gpghome"}).
 					WithExec([]string{"gpg", "--import", "/fake/gpg/fakekey.asc"}).
 					WithUnixSocket("/var/run/docker.sock", dockerSocket).
-					WithExec([]string{"goreleaser", "release", "--snapshot", "--skip", "docker,homebrew", "--verbose"})
+					WithExec([]string{"goreleaser", "release", "--snapshot", "--skip", "homebrew", "--verbose"})
+				// WithExec([]string{"goreleaser", "release", "--snapshot", "--skip", "docker,homebrew", "--verbose"})
 			}
 
 			// Execute the container command (release).
