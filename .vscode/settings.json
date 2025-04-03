@@ -1,0 +1,10 @@
+{
+  "github-actions.workflows.pinned.workflows": [
+    ".github/workflows/tag-release.yaml",
+    ".github/workflows/dagger-release.yaml"
+  ],
+  "yaml.schemas": {
+    "Kubernetes": "*.yaml",
+    "https://goreleaser.com/static/schema.json": "file:///Users/midas/Code/ri/.goreleaser.yaml"
+  }
+}
