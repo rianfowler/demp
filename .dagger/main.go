@@ -47,7 +47,7 @@ func (m *Demp) Hello(ctx context.Context) (string, error) {
  |  DON'T |
  |  HAVE  |
  | A COW, |
- | MAN! |
+ | MAN!! |
   \______/
        \   ^__^
         \  (oo)\_______
