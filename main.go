@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-
-	"github.com/rianfowler/demp/cmd"
 )
 
-func main() {
-	cmd.Execute()
-}
+// func main() {
+// 	cmd.Execute()
+// }
 
 // Module is our Dagger module.
 // Dagger CLI will look for exported methods on an exported type in package main.
